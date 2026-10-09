@@ -56,6 +56,21 @@ export function latestPendingJob(db: DatabaseSync, sender: string): PrintJob | n
   return (stmt.get(sender) as PrintJob | undefined) ?? null;
 }
 
+/** Safeguard counters for direct (non-admin) mode. */
+export function countPendingBySender(db: DatabaseSync, sender: string): number {
+  const row = db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE sender = ? AND status = 'pending'").get(sender) as
+    | { n: number }
+    | undefined;
+  return row?.n ?? 0;
+}
+
+export function countPrintedSince(db: DatabaseSync, sender: string, sinceMs: number): number {
+  const row = db.prepare(
+    "SELECT COUNT(*) AS n FROM jobs WHERE sender = ? AND status = 'printed' AND createdAt >= ?",
+  ).get(sender, sinceMs) as { n: number } | undefined;
+  return row?.n ?? 0;
+}
+
 export function setJobStatus(db: DatabaseSync, id: number, status: JobStatus): void {
   db.prepare('UPDATE jobs SET status = ? WHERE id = ?').run(status, id);
 }
@@ -96,6 +111,34 @@ export function isMockPrint(db: DatabaseSync, cfg: { mockPrint: boolean }): bool
   if (v === '1') return true;
   if (v === '0') return false;
   return cfg.mockPrint;
+}
+
+/** Direct-mode safeguard limits: numeric DB setting wins when valid, else .env default. */
+export interface AutoApproveLimits {
+  maxFileMB: number;
+  maxCopies: number;
+  maxPending: number;
+  maxPerHour: number;
+}
+
+function numSetting(db: DatabaseSync, key: string, fb: number, min: number, max: number): number {
+  const raw = getSetting(db, key);
+  if (!raw) return fb;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n)) return fb;
+  return Math.min(Math.max(n, min), max);
+}
+
+export function autoApproveLimits(
+  db: DatabaseSync,
+  cfg: { autoApproveMaxFileMB: number; autoApproveMaxCopies: number; autoApproveMaxPending: number; autoApproveMaxPerHour: number },
+): AutoApproveLimits {
+  return {
+    maxFileMB: numSetting(db, 'autoPrintMaxMB', cfg.autoApproveMaxFileMB, 1, 1000),
+    maxCopies: numSetting(db, 'autoPrintMaxCopies', cfg.autoApproveMaxCopies, 1, 10),
+    maxPending: numSetting(db, 'autoPrintMaxPending', cfg.autoApproveMaxPending, 1, 50),
+    maxPerHour: numSetting(db, 'autoPrintMaxPerHour', cfg.autoApproveMaxPerHour, 1, 100),
+  };
 }
 export function getSetting(db: DatabaseSync, key: string): string {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as

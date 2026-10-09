@@ -51,6 +51,15 @@ export function buildQueuedMessage(fileName: string): string {
   );
 }
 
+/** Direct mode escalated to pending: large / flood-suspect print needs admin review. */
+export function buildApprovalRequiredMessage(fileName: string, reason: string): string {
+  return (
+    `Received ${fileName}. ✅\n` +
+    `This print needs admin approval (${reason}) — it is queued and nothing has printed yet.\n` +
+    `You will be told once it is printed. Reply CANCEL to withdraw it.`
+  );
+}
+
 export function buildConfirmMessage(
   fileName: string,
   defaults: { colorMode: ColorMode; copies: number },

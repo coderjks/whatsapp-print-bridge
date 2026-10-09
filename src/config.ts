@@ -17,6 +17,11 @@ export interface AppConfig {
   mockPrint: boolean;
   /** When true, jobs wait for dashboard approval; when false, WhatsApp PRINT prints directly. */
   adminApproval: boolean;
+  /** Direct-mode safeguards: above these, jobs stay pending for admin review even when adminApproval is OFF. */
+  autoApproveMaxFileMB: number;
+  autoApproveMaxCopies: number;
+  autoApproveMaxPending: number;
+  autoApproveMaxPerHour: number;
 }
 
 export function parseAllowed(input: string | undefined): Set<string> {
@@ -35,6 +40,11 @@ export function loadConfig(): AppConfig {
     Math.max(parseInt(process.env.DEFAULT_COPIES ?? '1', 10) || 1, 1),
     10,
   );
+  const num = (v: string | undefined, fb: number, min: number, max: number): number => {
+    const n = parseInt(v ?? '', 10);
+    if (!Number.isFinite(n)) return fb;
+    return Math.min(Math.max(n, min), max);
+  };
   return {
     printerName: process.env.PRINTER_NAME ?? '',
     allowedNumbers: parseAllowed(process.env.ALLOWED_NUMBERS),
@@ -42,9 +52,13 @@ export function loadConfig(): AppConfig {
     defaultCopies: copies,
     maxFileMB: parseInt(process.env.MAX_FILE_MB ?? '20', 10) || 20,
     inboxDir: path.resolve(process.env.INBOX_DIR ?? './inbox'),
-    port: parseInt(process.env.PORT ?? '3000', 10) || 3000,
+    port: parseInt(process.env.PORT ?? '3001', 10) || 3001,
     linkPhoneNumber: (process.env.WHATSAPP_NUMBER ?? '').replace(/\D/g, ''),
     mockPrint: ['1', 'true', 'yes'].includes((process.env.MOCK_PRINT ?? '').toLowerCase()),
     adminApproval: ['1', 'true', 'yes'].includes((process.env.ADMIN_APPROVAL ?? '').toLowerCase()),
+    autoApproveMaxFileMB: num(process.env.AUTO_PRINT_MAX_MB, 5, 1, 1000),
+    autoApproveMaxCopies: num(process.env.AUTO_PRINT_MAX_COPIES, 2, 1, 10),
+    autoApproveMaxPending: num(process.env.AUTO_PRINT_MAX_PENDING, 3, 1, 50),
+    autoApproveMaxPerHour: num(process.env.AUTO_PRINT_MAX_PER_HOUR, 5, 1, 100),
   };
 }

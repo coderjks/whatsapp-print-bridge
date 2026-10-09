@@ -54,6 +54,9 @@ lpoptions -p <printer> -l | grep -i color
 
 1. Customer sends PDF / JPG / PNG / WEBP / DOCX / PPTX / XLSX to the linked number.
 2. **Approval OFF:** bot sends PRINT instructions → customer replies `PRINT [BW|COLOR] [COPIES N]` → prints immediately, bot sends print status. **`CANCEL`** withdraws.
+   Safeguards (even with approval OFF): large files (`AUTO_PRINT_MAX_MB`, default 5MB), many copies (`AUTO_PRINT_MAX_COPIES`, default 2),
+   too many pending files (`AUTO_PRINT_MAX_PENDING`, default 3) or too many prints/hour (`AUTO_PRINT_MAX_PER_HOUR`, default 5)
+   stay `pending` for admin review instead of auto-printing. Tune via `.env` or `POST /api/settings`.
    **Approval ON:** bot says the file is waiting for admin approval.
 3. Admin (either mode) can open the dashboard queue, **👁 Preview**, pick **BW/COLOR + copies**, and **✓ Approve & Print**.
 4. Job prints (or mock-archives) and the row flips to `printed`.

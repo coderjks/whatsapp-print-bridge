@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import type { AppConfig } from './config.js';
 import { ensurePdf, previewPdf } from './converter.js';
 import { buildTestPage, listPrinters, listPrintersStructured, printPdf, resolvePrinterName } from './printer.js';
-import { getAllowlist, getJob, getSetting, isAdminApproval, isMockPrint, listJobs, setAllowlist, setJobStatus, setSetting } from './queue.js';
+import { autoApproveLimits, getAllowlist, getJob, getSetting, isAdminApproval, isMockPrint, listJobs, setAllowlist, setJobStatus, setSetting } from './queue.js';
 import { bridgeState, logoutLink, normalizeNumber, refreshLinkCode, startLinking } from './whatsapp.js';
 
 const PAGE = `<!doctype html>
@@ -41,7 +41,7 @@ const PAGE = `<!doctype html>
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-weight:300;overflow-x:hidden;transition:background .4s,color .4s}
-header{background:#09090b;color:#fff;padding:28px 16px 70px}
+header{background:linear-gradient(120deg,#070b18 0%,#0e1533 55%,#1e1b4e 100%);color:#fff;padding:28px 16px 70px}
 .header-in{max-width:1360px;margin:0 auto;display:flex;align-items:center;gap:16px;position:relative;z-index:1}
 .logo{width:52px;height:52px;flex:none;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:16px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .logo svg{width:30px;height:30px}
@@ -49,6 +49,35 @@ header h1{margin:0;font-size:27px;font-weight:200;letter-spacing:2.5px}
 header p{margin:5px 0 0;opacity:.92;font-size:13.5px;font-weight:300;letter-spacing:.3px}
 .theme-btn{margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;font-weight:500;padding:9px 18px;border-radius:999px;cursor:pointer;font-size:13px;white-space:nowrap;backdrop-filter:blur(8px);transition:background .25s,transform .25s}
 .theme-btn:hover{background:rgba(255,255,255,.3);transform:translateY(-1px)}
+.concept{flex:1 1 auto;max-width:440px;min-width:0;margin:8px auto 0;display:flex;align-items:center;gap:10px;background:none;border:0;border-radius:0;padding:0 8px}
+.header-in .theme-btn{margin-left:0;flex:none}
+.c-node{display:flex;flex-direction:column;align-items:center;gap:3px;flex:none}
+.c-ic{position:relative;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.c-ic>svg{width:22px;height:22px}
+.c-ic.wa{background:#25D366;box-shadow:0 4px 14px rgba(37,211,102,.5);animation:wapulse 6s ease-out infinite}
+.c-ic.pr{background:linear-gradient(135deg,#4f46e5,#4f46e5);box-shadow:0 4px 14px rgba(79,70,229,.5)}
+.c-label{display:none}
+.c-track{position:relative;flex:1;height:61px;min-width:40px}
+.c-doc{position:absolute;top:8px;left:0;width:24px;height:24px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4));opacity:0;animation:docmove 6s ease-in-out infinite}
+.c-doc svg{width:100%;height:100%;display:block}
+.c-slot{position:relative;width:24px;height:18px;flex:none}
+.c-paper{position:absolute;left:0;top:0;width:24px;height:0;border-radius:0 0 3px 3px;background:repeating-linear-gradient(#fff 0 3px,#c7d2fe 3px 4px);box-shadow:0 2px 6px rgba(0,0,0,.35);opacity:0;animation:paperout 6s ease-in-out infinite}
+.c-done{position:absolute;right:-5px;top:-5px;width:18px;height:18px;border-radius:50%;background:#22c55e;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;opacity:0;animation:donebadge 6s ease-in-out infinite}
+.c-status{position:absolute;left:0;right:0;bottom:0;height:22px;font-size:13.5px;font-weight:400;color:rgba(255,255,255,.9);text-align:center}
+.c-status span{position:absolute;inset:0;opacity:0;line-height:22px;white-space:nowrap}
+.st1{animation:st1 6s linear infinite}
+.st2{animation:st2 6s linear infinite}
+.st3{animation:st3 6s linear infinite;color:#6ee7a8}
+@keyframes docmove{0%{left:0;opacity:0;transform:translateY(8px) scale(.7) rotate(-10deg)}7%{opacity:1}24%{transform:translateY(-14px) scale(.92) rotate(5deg)}42%{left:calc(100% - 24px);opacity:1;transform:translateY(4px) scale(1) rotate(0deg)}50%,100%{left:calc(100% - 24px);opacity:0;transform:translateY(4px) scale(1)}}
+@keyframes wapulse{0%,44%{box-shadow:0 4px 14px rgba(37,211,102,.5),0 0 0 0 rgba(37,211,102,.55)}22%{box-shadow:0 4px 14px rgba(37,211,102,.5),0 0 0 10px rgba(37,211,102,0)}45%,100%{box-shadow:0 4px 14px rgba(37,211,102,.5)}}
+@keyframes paperout{0%,40%{height:0;opacity:0}48%{opacity:1}64%{height:18px;opacity:1}84%{height:18px;opacity:1}94%,100%{height:18px;opacity:0}}
+@keyframes donebadge{0%,62%{opacity:0;transform:scale(.4)}70%,90%{opacity:1;transform:scale(1)}96%,100%{opacity:0;transform:scale(.4)}}
+@keyframes st1{0%,38%{opacity:1}44%,100%{opacity:0}}
+@keyframes st2{0%,42%{opacity:0}48%,60%{opacity:1}66%,100%{opacity:0}}
+@keyframes st3{0%,64%{opacity:0}70%,92%{opacity:1}98%,100%{opacity:0}}
+@media(max-width:660px){.concept{gap:8px}}
+@media(max-width:920px){.c-status{display:none}}
+@media(max-width:640px){.concept{display:none}}
 main{max-width:1360px;margin:-38px auto 48px;padding:0 24px;position:relative;z-index:1}
 .dash-grid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;align-items:start}
 .dash-main{min-width:0;display:flex;flex-direction:column;gap:0}
@@ -179,13 +208,16 @@ button.mini:hover{color:var(--brand1);text-decoration:underline}
 .switch.big::after{width:19px;height:19px;top:3px}
 .switch-wrap input:checked + .switch.big::after{left:27px}
 .dash-side .link-grid{grid-template-columns:1fr}
-#preview-modal,#link-modal,#app-modal{animation:fade .25s ease}
-#preview-modal > div,#link-modal > div,#app-modal > div{animation:pop .3s cubic-bezier(.2,.7,.3,1.1)}
+#preview-modal,#link-modal,#app-modal,#auto-modal{animation:fade .25s ease}
+#preview-modal > div,#link-modal > div,#app-modal > div,#auto-modal > div{animation:pop .3s cubic-bezier(.2,.7,.3,1.1)}
+#preview-modal > div,#link-modal > div,#app-modal > div,#auto-modal > div{background:#fff;color:#09090b;--card:#fff;--modal-card:#fff;--card-border:rgba(9,9,11,.12);--row-border:rgba(9,9,11,.09);--text:#09090b;--muted:#52525b;--field:#f4f4f5;--code-bg:rgba(79,70,229,.09)}
+#preview-modal a,#link-modal a,#app-modal a,#auto-modal a{color:#4f46e5}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @keyframes pop{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:none}}
 footer{text-align:center;color:var(--muted);font-size:12px;font-weight:300;margin:28px 0;letter-spacing:.5px}
 a{color:var(--brand1)}
 @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion: reduce){.c-status .st1{opacity:1}.c-track .c-doc{opacity:1;left:0}}
 </style></head><body>
 <header>
   <div class="header-in">
@@ -199,6 +231,19 @@ a{color:var(--brand1)}
     <div>
       <h1>PrintBridge</h1>
       <p>WhatsApp to printer · PDF · images · Office files</p>
+    </div>
+    <div class="concept" aria-hidden="true">
+      <div class="c-node">
+        <span class="c-ic wa"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="#fff" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span>
+        <span class="c-slot"></span>
+        <span class="c-label">WhatsApp</span>
+      </div>
+      <div class="c-track"><div class="c-doc"><svg viewBox="0 0 24 24"><path fill="#fff" d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path fill="#4f46e5" d="M14 2v5h5z"/></svg></div><div class="c-status"><span class="st1">Sending…</span><span class="st2">Printing…</span><span class="st3">Printed ✓</span></div></div>
+      <div class="c-node">
+        <span class="c-ic pr"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><rect x="6" y="14" width="12" height="7"/></svg><span class="c-done">✓</span></span>
+        <span class="c-slot"><span class="c-paper"></span></span>
+        <span class="c-label">Printer</span>
+      </div>
     </div>
     <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
   </div>
@@ -250,6 +295,10 @@ a{color:var(--brand1)}
       <h2>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><rect x="6" y="14" width="12" height="7"/></svg>
         Print queue
+        <button class="ghost" id="safeguards-btn" onclick="openAutoModal()" title="Manage auto-print safeguards" style="font-size:12px;padding:6px 12px;margin-left:4px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Safeguards <span class="hint" id="safeguards-summary" style="font-weight:300"></span>
+        </button>
         <label class="switch-wrap" title="When ON, jobs wait for dashboard approval. When OFF, WhatsApp PRINT prints directly.">
           <input type="checkbox" id="approval-toggle" onchange="setApproval(this.checked)">
           <span class="switch"></span><span id="approval-label">Admin approval</span>
@@ -275,6 +324,43 @@ a{color:var(--brand1)}
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="ghost" id="app-modal-cancel" onclick="closeAppModal()">Cancel</button>
           <button class="action" id="app-modal-ok" onclick="closeAppModal()">OK</button>
+        </div>
+      </div>
+    </div>
+    <div id="auto-modal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.7);backdrop-filter:blur(6px);z-index:60;padding:24px;overflow-y:auto" onclick="if(event.target===this)closeAutoModal()">
+      <div style="background:var(--card);border:1px solid var(--card-border);border-radius:18px;max-width:520px;margin:8vh auto;padding:24px;box-shadow:var(--shadow)">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <b>Auto-print safeguards</b>
+          <button class="ghost" style="margin-left:auto" onclick="closeAutoModal()">✕ Close</button>
+        </div>
+        <p class="hint" style="margin:6px 0 14px">Apply when <b>Admin approval is OFF</b>. Prints above any limit stay <span class="badge pending">pending</span> for your review instead of printing automatically. Dashboard Approve &amp; Print always bypasses these.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="opt-card" style="padding:14px 12px;text-align:left">
+            <h3>Max file size</h3>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="auto-maxMB" type="number" min="1" max="1000" style="width:80px"><span class="hint">MB</span></div>
+            <div class="hint" style="margin-top:6px">Files larger than this wait for review.</div>
+          </div>
+          <div class="opt-card" style="padding:14px 12px;text-align:left">
+            <h3>Max copies</h3>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="auto-maxCopies" type="number" min="1" max="10" style="width:80px"><span class="hint">copies</span></div>
+            <div class="hint" style="margin-top:6px"><code>PRINT COPIES N</code> above this waits.</div>
+          </div>
+          <div class="opt-card" style="padding:14px 12px;text-align:left">
+            <h3>Max pending / sender</h3>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="auto-maxPending" type="number" min="1" max="50" style="width:80px"><span class="hint">jobs</span></div>
+            <div class="hint" style="margin-top:6px">Flood guard: further prints wait.</div>
+          </div>
+          <div class="opt-card" style="padding:14px 12px;text-align:left">
+            <h3>Max auto-prints / hour</h3>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="auto-maxPerHour" type="number" min="1" max="100" style="width:80px"><span class="hint">prints</span></div>
+            <div class="hint" style="margin-top:6px">Rate guard per sender, rolling hour.</div>
+          </div>
+        </div>
+        <div class="msg" id="auto-msg" style="margin-top:10px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="ghost" onclick="closeAutoModal()">Cancel</button>
+          <button class="action" onclick="saveAuto()">Save safeguards</button>
         </div>
       </div>
     </div>
@@ -542,7 +628,7 @@ function closeLinkModal(){
   if(t){t.checked=false;try{localStorage.setItem('pb-connect','0')}catch(e){}}
 }
 document.addEventListener('keydown',function(e){
-  if(e.key==='Escape'){closeLinkModal();closePreview();closeAppModal();}
+  if(e.key==='Escape'){closeLinkModal();closePreview();closeAppModal();closeAutoModal();}
 });
 let appModalConfirm=null;
 function showAlert(msg){
@@ -576,6 +662,13 @@ async function loadSettings(){
     document.getElementById('approval-label').textContent=s.adminApproval?'Admin approval: ON':'Admin approval: OFF';
     document.getElementById('mock-toggle').checked=!!s.mockPrint;
     document.getElementById('mock-label').textContent=s.mockPrint?'Mock print: ON':'Mock print: OFF';
+    if(s.auto){
+      document.getElementById('auto-maxMB').value=s.auto.maxFileMB;
+      document.getElementById('auto-maxCopies').value=s.auto.maxCopies;
+      document.getElementById('auto-maxPending').value=s.auto.maxPending;
+      document.getElementById('auto-maxPerHour').value=s.auto.maxPerHour;
+      document.getElementById('safeguards-summary').textContent='· '+s.auto.maxFileMB+'MB / '+s.auto.maxCopies+' copies / '+s.auto.maxPending+' pending / '+s.auto.maxPerHour+'/h';
+    }
   }catch(e){}
 }
 async function setMock(on){
@@ -586,6 +679,21 @@ async function setApproval(on){
   await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adminApproval:on})});
   loadSettings();
 }
+async function saveAuto(){
+  const v=function(id){return document.getElementById(id).value;};
+  document.getElementById('auto-msg').textContent='Saving…';
+  const r=await (await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto:{maxFileMB:v('auto-maxMB'),maxCopies:v('auto-maxCopies'),maxPending:v('auto-maxPending'),maxPerHour:v('auto-maxPerHour')}})})).json();
+  if(!r.ok){document.getElementById('auto-msg').textContent='Error: '+(r.error||'save failed');return;}
+  document.getElementById('auto-msg').textContent='Saved.';
+  await loadSettings();
+  setTimeout(closeAutoModal,600);
+}
+function openAutoModal(){
+  document.getElementById('auto-msg').textContent='';
+  loadSettings();
+  document.getElementById('auto-modal').style.display='block';
+}
+function closeAutoModal(){document.getElementById('auto-modal').style.display='none';}
 function phoneInput(){
   phoneTouched=true;
   const d=document.getElementById('wa-phone').value.replace(/\D/g,'');
@@ -810,7 +918,7 @@ export function startDashboard(cfg: AppConfig, db: DatabaseSync): void {
   });
 
   app.get('/api/settings', (_req, res) => {
-    res.json({ adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg) });
+    res.json({ adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg), auto: autoApproveLimits(db, cfg) });
   });
 
   app.post('/api/settings', (req, res) => {
@@ -820,7 +928,39 @@ export function startDashboard(cfg: AppConfig, db: DatabaseSync): void {
     const m = pick(req.body?.mockPrint);
     if (a !== null) setSetting(db, 'adminApproval', a);
     if (m !== null) setSetting(db, 'mockPrint', m);
-    res.json({ ok: true, adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg) });
+    const num = (v: unknown, min: number, max: number): string | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const n = parseInt(String(v), 10);
+      if (!Number.isFinite(n)) return null;
+      return String(Math.min(Math.max(n, min), max));
+    };
+    const autoMap: Record<string, { key: string; min: number; max: number }> = {
+      maxFileMB: { key: 'autoPrintMaxMB', min: 1, max: 1000 },
+      maxCopies: { key: 'autoPrintMaxCopies', min: 1, max: 10 },
+      maxPending: { key: 'autoPrintMaxPending', min: 1, max: 50 },
+      maxPerHour: { key: 'autoPrintMaxPerHour', min: 1, max: 100 },
+    };
+    const autoBody = (req.body as { auto?: Record<string, unknown> } | undefined)?.auto;
+    if (autoBody && typeof autoBody === 'object') {
+      for (const [field, { key, min, max }] of Object.entries(autoMap)) {
+        const nv = num(autoBody[field], min, max);
+        if (nv !== null) setSetting(db, key, nv);
+      }
+    } else {
+      // Flat aliases: { autoPrintMaxMB, autoPrintMaxCopies, ... }
+      const flat: Record<string, { key: string; min: number; max: number }> = {
+        autoPrintMaxMB: { key: 'autoPrintMaxMB', min: 1, max: 1000 },
+        autoPrintMaxCopies: { key: 'autoPrintMaxCopies', min: 1, max: 10 },
+        autoPrintMaxPending: { key: 'autoPrintMaxPending', min: 1, max: 50 },
+        autoPrintMaxPerHour: { key: 'autoPrintMaxPerHour', min: 1, max: 100 },
+      };
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      for (const [field, { key, min, max }] of Object.entries(flat)) {
+        const nv = num(body[field], min, max);
+        if (nv !== null) setSetting(db, key, nv);
+      }
+    }
+    res.json({ ok: true, adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg), auto: autoApproveLimits(db, cfg) });
   });
 
   app.get('/api/jobs', (_req, res) => {

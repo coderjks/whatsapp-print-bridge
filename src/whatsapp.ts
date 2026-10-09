@@ -12,10 +12,10 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import type { DatabaseSync } from 'node:sqlite';
 import type { AppConfig } from './config.js';
-import { buildConfirmMessage, buildQueuedMessage, parsePrintCommand } from './commands.js';
+import { buildApprovalRequiredMessage, buildConfirmMessage, buildQueuedMessage, parsePrintCommand } from './commands.js';
 import { ensurePdf } from './converter.js';
 import { printPdf, resolvePrinterName } from './printer.js';
-import { createJob, getAllowlist, getSetting, isAdminApproval, isMockPrint, latestPendingJob, openDb, setJobStatus } from './queue.js';
+import { autoApproveLimits, countPendingBySender, countPrintedSince, createJob, getAllowlist, getSetting, isAdminApproval, isMockPrint, latestPendingJob, openDb, setJobStatus } from './queue.js';
 
 const log = pino({ level: 'info' });
 
@@ -146,6 +146,35 @@ export function effectiveAllowlist(db: DatabaseSync, cfg: AppConfig): Set<string
 export function normalizeNumber(input: string): string | null {
   const digits = input.replace(/\D/g, '');
   return digits.length >= 7 && digits.length <= 15 ? digits : null;
+}
+
+/** Direct-mode safeguard: returns a human reason when a print must stay pending for admin review. */
+export function directPrintBlockReason(
+  opts: { fileMB: number; copies: number; pending: number; printedLastHour: number },
+  limits: { maxFileMB: number; maxCopies: number; maxPending: number; maxPerHour: number },
+): string | null {
+  if (opts.fileMB > limits.maxFileMB) {
+    return `large file (${opts.fileMB.toFixed(1)}MB > ${limits.maxFileMB}MB auto-limit)`;
+  }
+  if (opts.copies > limits.maxCopies) {
+    return `COPIES ${opts.copies} > auto-limit ${limits.maxCopies}`;
+  }
+  if (opts.pending >= limits.maxPending) {
+    return `too many pending files (${opts.pending} ≥ ${limits.maxPending})`;
+  }
+  if (opts.printedLastHour >= limits.maxPerHour) {
+    return `too many prints this hour (${opts.printedLastHour} ≥ ${limits.maxPerHour})`;
+  }
+  return null;
+}
+
+async function storedFileSizeMB(storedPath: string): Promise<number> {
+  try {
+    const st = await fs.promises.stat(storedPath);
+    return st.size / 1024 / 1024;
+  } catch {
+    return 0;
+  }
 }
 
 type MediaInfo = { buffer: Buffer; mime: string; fileName: string } | null;
@@ -295,11 +324,25 @@ export async function startBridge(cfg: AppConfig, existingDb?: DatabaseSync): Pr
             storedPath: stored,
             mime: media.mime,
           });
-          await sock.sendMessage(remote, {
-            text: isAdminApproval(db, cfg)
-              ? buildQueuedMessage(safe)
-              : buildConfirmMessage(safe, { colorMode: cfg.defaultColorMode, copies: cfg.defaultCopies }),
-          });
+          if (isAdminApproval(db, cfg)) {
+            await sock.sendMessage(remote, { text: buildQueuedMessage(safe) });
+            continue;
+          }
+          // Direct mode: large / flood-suspect files escalate to pending for admin review.
+          {
+            const limits = autoApproveLimits(db, cfg);
+            const pending = countPendingBySender(db, sender);
+            const printedLastHour = countPrintedSince(db, sender, Date.now() - 3600_000);
+            const reason = directPrintBlockReason(
+              { fileMB: sizeMB, copies: cfg.defaultCopies, pending, printedLastHour },
+              limits,
+            );
+            await sock.sendMessage(remote, {
+              text: reason
+                ? buildApprovalRequiredMessage(safe, reason)
+                : buildConfirmMessage(safe, { colorMode: cfg.defaultColorMode, copies: cfg.defaultCopies }),
+            });
+          }
           continue;
         }
 
@@ -324,7 +367,22 @@ export async function startBridge(cfg: AppConfig, existingDb?: DatabaseSync): Pr
           });
           continue;
         }
-        // Direct mode: WhatsApp PRINT prints immediately.
+        // Direct mode: WhatsApp PRINT prints immediately, unless a safeguard escalates to admin review.
+        if (cmd.kind === 'print') {
+          const limits = autoApproveLimits(db, cfg);
+          const pending = countPendingBySender(db, sender);
+          const printedLastHour = countPrintedSince(db, sender, Date.now() - 3600_000);
+          const fileMB = await storedFileSizeMB(job.storedPath);
+          const reason = directPrintBlockReason({ fileMB, copies: cmd.copies, pending, printedLastHour }, limits);
+          if (reason) {
+            await sock.sendMessage(remote, {
+              text:
+                buildApprovalRequiredMessage(job.originalName, reason) +
+                `\nAdmin will review it on the dashboard.`,
+            });
+            continue;
+          }
+        }
         try {
           const pdf = await ensurePdf(job.storedPath, job.mime);
           await printPdf(pdf, {
