@@ -412,12 +412,12 @@ a{color:var(--brand1)}
       </div>
       <div id="plat-win">
         <div class="step"><div class="step-num">1</div><div>
-          <h3>Install Node.js 20 LTS + LibreOffice</h3>
-          <p>Node from <code>nodejs.org</code> (LTS), LibreOffice from <code>libreoffice.org</code> — needed for Word / PowerPoint / Excel files.</p>
+          <h3>Double-click <code>start-windows.bat</code> — that's it</h3>
+          <p>No Node.js? The starter installs the latest LTS itself (via <code>winget</code>, else a silent MSI — one admin prompt). Missing LibreOffice only triggers a warning: PDFs and images print fine without it; Word / PowerPoint / Excel need it from <code>libreoffice.org</code>.</p>
         </div></div>
         <div class="step"><div class="step-num">2</div><div>
-          <h3>Double-click <code>start-windows.bat</code></h3>
-          <p>First run installs dependencies (takes a few minutes) and opens the dashboard at <code>http://localhost:3001</code>. Optional: copy <code>.env.example</code> to <code>.env</code> first to preset the printer or pairing number.</p>
+          <h3>First run finishes the setup</h3>
+          <p>It installs dependencies (a few minutes), creates <code>.env</code> if absent, and opens the dashboard at <code>http://localhost:3001</code>.</p>
         </div></div>
         <div class="step"><div class="step-num">3</div><div>
           <h3>Pick printer + Test print</h3>
@@ -426,26 +426,26 @@ a{color:var(--brand1)}
       </div>
       <div id="plat-mac" style="display:none">
         <div class="step"><div class="step-num">1</div><div>
-          <h3>Install Node 20 + LibreOffice</h3>
-          <p><code>brew install node@20</code> (or the Node 20+ pkg from <code>nodejs.org</code>), <code>brew install --cask libreoffice</code> for Office files.</p>
+          <h3>Run <code>./start-macos.sh</code></h3>
+          <p>One-click: installs Homebrew / Node 20 / LibreOffice on first run, warns if no printers exist, then opens the dashboard at <code>http://localhost:3001</code>.</p>
         </div></div>
         <div class="step"><div class="step-num">2</div><div>
           <h3>Add your printer</h3>
           <p>System Settings → Printers, then verify with <code>lpstat -p -d</code>. CUPS details live at <code>http://localhost:631</code>.</p>
         </div></div>
         <div class="step"><div class="step-num">3</div><div>
-          <h3>Run the bridge</h3>
-          <p><code>cp .env.example .env</code> (edit <code>PRINTER_NAME</code> if needed), <code>npm install --allow-git=all</code>, <code>npm run dev</code> → dashboard at <code>http://localhost:3001</code>.</p>
+          <h3>Manual alternative</h3>
+          <p><code>brew install node@20</code>, <code>brew install --cask libreoffice</code>, <code>cp .env.example .env</code>, <code>npm install --allow-git=all</code>, <code>npm run dev</code>.</p>
         </div></div>
       </div>
       <div id="plat-linux" style="display:none">
         <div class="step"><div class="step-num">1</div><div>
-          <h3>Install CUPS + LibreOffice</h3>
-          <p><code>sudo apt install -y nodejs npm cups cups-client libreoffice-writer libreoffice-impress libreoffice-calc</code>, then <code>sudo usermod -aG lpadmin $USER</code> and re-login.</p>
+          <h3>Run <code>./start-linux.sh</code></h3>
+          <p>One-click for Debian / Ubuntu / Raspberry Pi OS: installs Node.js + CUPS + LibreOffice via apt on first run (needs sudo), adds you to <code>lpadmin</code>, then opens the dashboard at <code>http://localhost:3001</code>.</p>
         </div></div>
         <div class="step"><div class="step-num">2</div><div>
-          <h3>Run the bridge</h3>
-          <p><code>cp .env.example .env</code>, <code>npm install --allow-git=all</code>, <code>npm run dev</code> → dashboard at <code>http://localhost:3001</code>.</p>
+          <h3>Manual alternative</h3>
+          <p><code>sudo apt install -y nodejs npm cups cups-client libreoffice-writer libreoffice-impress libreoffice-calc</code>, <code>cp .env.example .env</code>, <code>npm install --allow-git=all</code>, <code>npm run dev</code>.</p>
         </div></div>
         <div class="step"><div class="step-num">3</div><div>
           <h3>Or run with Docker (PC / Raspberry Pi)</h3>

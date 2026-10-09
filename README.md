@@ -22,15 +22,18 @@ npm run dev
 # scan the QR with WhatsApp > Linked devices
 ```
 
+One-click (does the above + installs Node/LibreOffice deps on first run):
+Windows → double-click **`start-windows.bat`** · macOS → `./start-macos.sh` · Linux → `./start-linux.sh`.
+
 ### Windows (cybercafe laptop)
 
-1. Install **Node.js 20 LTS** from https://nodejs.org and **LibreOffice**
-   from https://www.libreoffice.org/download/download-libreoffice/
-   (needed for Word/PowerPoint/Excel files).
-2. Unzip the project folder, then double-click **`start-windows.bat`**.
+1. Double-click **`start-windows.bat`**. No Node? It installs the latest LTS itself
+   (via `winget`, else a silent MSI — may show one admin prompt), warns if
+   LibreOffice is missing (needed for Word/PowerPoint/Excel files, from
+   https://www.libreoffice.org/download/download-libreoffice/).
    First run installs dependencies; every run opens the dashboard at
    `http://localhost:3001`.
-3. Link WhatsApp, pick the Windows printer from the side-panel dropdown,
+2. Link WhatsApp, pick the Windows printer from the side-panel dropdown,
    press Test print. Keep the black window open during shop hours
    (closing it stops the app).
 
