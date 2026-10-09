@@ -404,6 +404,56 @@ a{color:var(--brand1)}
       </div></div>
     </div>
     <div class="card">
+      <h2>Run on Windows · macOS · Linux</h2>
+      <div class="tabs" style="margin-bottom:4px">
+        <button class="tab active" id="ptab-win" onclick="showPlatform('win')">Windows</button>
+        <button class="tab" id="ptab-mac" onclick="showPlatform('mac')">macOS</button>
+        <button class="tab" id="ptab-linux" onclick="showPlatform('linux')">Linux</button>
+      </div>
+      <div id="plat-win">
+        <div class="step"><div class="step-num">1</div><div>
+          <h3>Install Node.js 20 LTS + LibreOffice</h3>
+          <p>Node from <code>nodejs.org</code> (LTS), LibreOffice from <code>libreoffice.org</code> — needed for Word / PowerPoint / Excel files.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div>
+          <h3>Double-click <code>start-windows.bat</code></h3>
+          <p>First run installs dependencies (takes a few minutes) and opens the dashboard at <code>http://localhost:3001</code>. Optional: copy <code>.env.example</code> to <code>.env</code> first to preset the printer or pairing number.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div>
+          <h3>Pick printer + Test print</h3>
+          <p>Dashboard side panel → Printers dropdown → <b>Test print</b>. Printing goes through SumatraPDF (bundled); BW maps to monochrome. Keep the black window open during shop hours — closing it stops the app.</p>
+        </div></div>
+      </div>
+      <div id="plat-mac" style="display:none">
+        <div class="step"><div class="step-num">1</div><div>
+          <h3>Install Node 20 + LibreOffice</h3>
+          <p><code>brew install node@20</code> (or the Node 20+ pkg from <code>nodejs.org</code>), <code>brew install --cask libreoffice</code> for Office files.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div>
+          <h3>Add your printer</h3>
+          <p>System Settings → Printers, then verify with <code>lpstat -p -d</code>. CUPS details live at <code>http://localhost:631</code>.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div>
+          <h3>Run the bridge</h3>
+          <p><code>cp .env.example .env</code> (edit <code>PRINTER_NAME</code> if needed), <code>npm install --allow-git=all</code>, <code>npm run dev</code> → dashboard at <code>http://localhost:3001</code>.</p>
+        </div></div>
+      </div>
+      <div id="plat-linux" style="display:none">
+        <div class="step"><div class="step-num">1</div><div>
+          <h3>Install CUPS + LibreOffice</h3>
+          <p><code>sudo apt install -y nodejs npm cups cups-client libreoffice-writer libreoffice-impress libreoffice-calc</code>, then <code>sudo usermod -aG lpadmin $USER</code> and re-login.</p>
+        </div></div>
+        <div class="step"><div class="step-num">2</div><div>
+          <h3>Run the bridge</h3>
+          <p><code>cp .env.example .env</code>, <code>npm install --allow-git=all</code>, <code>npm run dev</code> → dashboard at <code>http://localhost:3001</code>.</p>
+        </div></div>
+        <div class="step"><div class="step-num">3</div><div>
+          <h3>Or run with Docker (PC / Raspberry Pi)</h3>
+          <p><code>npm run build &amp;&amp; docker compose up --build -d</code> — shares host CUPS via <code>/var/run/cups</code>; grab the QR with <code>docker logs -f whatsapp-print-bridge</code>.</p>
+        </div></div>
+      </div>
+    </div>
+    <div class="card">
       <h2>Commands &amp; approvals</h2>
       <table class="cmd-table"><thead><tr><th>Where</th><th>Action</th><th>Effect</th></tr></thead><tbody>
         <tr><td>WhatsApp</td><td><code>PRINT [BW|COLOR] [COPIES N]</code></td><td>Prints immediately when approval is OFF; acknowledged-and-queued when ON</td></tr>
@@ -480,6 +530,13 @@ function showTab(name){
     document.getElementById('tab-'+t).className = 'tab'+(name===t?' active':'');
   }
   try{localStorage.setItem('pb-tab',name)}catch(e){}
+}
+function showPlatform(p){
+  if(p!=='win'&&p!=='mac'&&p!=='linux')p='win';
+  for(const t of ['win','mac','linux']){
+    document.getElementById('plat-'+t).style.display = p===t?'block':'none';
+    document.getElementById('ptab-'+t).className = 'tab'+(p===t?' active':'');
+  }
 }
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
