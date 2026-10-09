@@ -41,10 +41,10 @@ goto office_ok
 where winget >nul 2>nul
 if errorlevel 1 (
   echo [PrintBridge] winget not found - please install manually from https://www.libreoffice.org/download/download-libreoffice/
-  echo [PrintBridge] Continuing without LibreOffice ...
+  echo [PrintBridge] Continuing without LibreOffice 
   goto :office_ok
 )
-echo [PrintBridge] Installing LibreOffice (one time, may take a few minutes) ...
+echo [PrintBridge] Installing LibreOffice (one time, may take a few minutes) 
 winget install -e --id TheDocumentFoundation.LibreOffice --accept-source-agreements --accept-package-agreements
 if errorlevel 1 (
   echo [PrintBridge] LibreOffice install failed or was cancelled - continuing without it.
@@ -53,12 +53,12 @@ if errorlevel 1 (
 :office_ok
 
 if not exist .env (
-  echo [PrintBridge] Creating default .env ...
+  echo [PrintBridge] Creating default .env 
   copy .env.example .env >nul
 )
 
 if not exist node_modules (
-  echo [PrintBridge] First run: installing dependencies (one time, takes a few minutes) ...
+  echo [PrintBridge] First run: installing dependencies (one time, takes a few minutes) 
   call npm install --allow-git=all --no-audit --no-fund
   if errorlevel 1 (
     echo [PrintBridge] Install failed. Check your internet connection and try again.
@@ -70,7 +70,7 @@ if not exist node_modules (
 if not exist auth mkdir auth
 if not exist inbox mkdir inbox
 
-echo [PrintBridge] Starting on http://localhost:3001 ...
+echo [PrintBridge] Starting on http://localhost:3001 
 start "" http://localhost:3001
 set PORT=3001
 call npm run dev
@@ -78,10 +78,10 @@ pause
 goto :eof
 
 :install_node
-echo [PrintBridge] Node.js not found - installing automatically (one time, may show an admin prompt) ...
+echo [PrintBridge] Node.js not found - installing automatically (one time, may show an admin prompt) 
 where winget >nul 2>nul
 if not errorlevel 1 goto :have_winget
-echo [PrintBridge] winget not found - downloading the latest Node.js LTS from nodejs.org ...
+echo [PrintBridge] winget not found - downloading the latest Node.js LTS from nodejs.org 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$v=(Invoke-RestMethod 'https://nodejs.org/dist/index.json' | Where-Object { $_.lts } | Select-Object -First 1).version; $msi=$env:TEMP+'\node-lts.msi'; Invoke-WebRequest -Uri ('https://nodejs.org/dist/'+$v+'/node-'+$v+'-x64.msi') -OutFile $msi; Start-Process msiexec -ArgumentList '/i',$msi,'/qn','/norestart' -Wait"
 goto :node_path_fix
 :have_winget
