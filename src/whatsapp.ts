@@ -15,7 +15,7 @@ import type { AppConfig } from './config.js';
 import { buildApprovalRequiredMessage, buildConfirmMessage, buildQueuedMessage, parsePrintCommand } from './commands.js';
 import { ensurePdf } from './converter.js';
 import { printPdf, resolvePrinterName } from './printer.js';
-import { autoApproveLimits, countPendingBySender, countPrintedSince, createJob, getAllowlist, getSetting, isAdminApproval, isMockPrint, latestPendingJob, openDb, setJobStatus } from './queue.js';
+import { autoApproveLimits, countPendingBySender, countPrintedSince, createJob, getAllowlist, getSetting, isAdminApproval, isMockPrint, latestPendingJob, maxDownloadMB, openDb, setJobStatus } from './queue.js';
 
 const log = pino({ level: 'info' });
 
@@ -310,8 +310,9 @@ export async function startBridge(cfg: AppConfig, existingDb?: DatabaseSync): Pr
             continue;
           }
           const sizeMB = media.buffer.length / 1024 / 1024;
-          if (sizeMB > cfg.maxFileMB) {
-            await sock.sendMessage(remote, { text: `File too large (${sizeMB.toFixed(1)}MB > ${cfg.maxFileMB}MB).` });
+          const dlMaxMB = maxDownloadMB(db, cfg);
+          if (sizeMB > dlMaxMB) {
+            await sock.sendMessage(remote, { text: `File too large (${sizeMB.toFixed(1)}MB > ${dlMaxMB}MB).` });
             continue;
           }
           const safe = path.basename(media.fileName).replace(/[^a-zA-Z0-9._-]/g, '_');

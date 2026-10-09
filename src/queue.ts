@@ -140,6 +140,10 @@ export function autoApproveLimits(
     maxPerHour: numSetting(db, 'autoPrintMaxPerHour', cfg.autoApproveMaxPerHour, 1, 100),
   };
 }
+/** Hard download-size limit: numeric DB setting wins when valid, else .env default. */
+export function maxDownloadMB(db: DatabaseSync, cfg: { maxFileMB: number }): number {
+  return numSetting(db, 'maxDownloadMB', cfg.maxFileMB, 1, 1000);
+}
 export function getSetting(db: DatabaseSync, key: string): string {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
     | { value: string }

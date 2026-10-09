@@ -6,7 +6,7 @@ import QRCode from 'qrcode';
 import type { AppConfig } from './config.js';
 import { ensurePdf, previewPdf } from './converter.js';
 import { buildTestPage, listPrinters, listPrintersStructured, printPdf, resolvePrinterName } from './printer.js';
-import { autoApproveLimits, getAllowlist, getJob, getSetting, isAdminApproval, isMockPrint, listJobs, setAllowlist, setJobStatus, setSetting } from './queue.js';
+import { autoApproveLimits, getAllowlist, getJob, getSetting, isAdminApproval, isMockPrint, listJobs, maxDownloadMB, setAllowlist, setJobStatus, setSetting } from './queue.js';
 import { bridgeState, logoutLink, normalizeNumber, refreshLinkCode, startLinking } from './whatsapp.js';
 
 const PAGE = `<!doctype html>
@@ -355,6 +355,13 @@ a{color:var(--brand1)}
             <h3>Max auto-prints / hour</h3>
             <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="auto-maxPerHour" type="number" min="1" max="100" style="width:80px"><span class="hint">prints</span></div>
             <div class="hint" style="margin-top:6px">Rate guard per sender, rolling hour.</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--row-border);margin-top:14px;padding-top:14px">
+          <div class="opt-card" style="padding:14px 12px;text-align:left">
+            <h3>Max download size (hard limit)</h3>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="dl-maxMB" type="number" min="1" max="1000" style="width:80px"><span class="hint">MB</span></div>
+            <div class="hint" style="margin-top:6px">Files larger than this are rejected outright with a WhatsApp reply — in both modes. Default from <code>MAX_FILE_MB</code>.</div>
           </div>
         </div>
         <div class="msg" id="auto-msg" style="margin-top:10px"></div>
@@ -726,6 +733,7 @@ async function loadSettings(){
       document.getElementById('auto-maxPerHour').value=s.auto.maxPerHour;
       document.getElementById('safeguards-summary').textContent='· '+s.auto.maxFileMB+'MB / '+s.auto.maxCopies+' copies / '+s.auto.maxPending+' pending / '+s.auto.maxPerHour+'/h';
     }
+    if(s.maxDownloadMB!==undefined)document.getElementById('dl-maxMB').value=s.maxDownloadMB;
   }catch(e){}
 }
 async function setMock(on){
@@ -739,7 +747,7 @@ async function setApproval(on){
 async function saveAuto(){
   const v=function(id){return document.getElementById(id).value;};
   document.getElementById('auto-msg').textContent='Saving…';
-  const r=await (await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto:{maxFileMB:v('auto-maxMB'),maxCopies:v('auto-maxCopies'),maxPending:v('auto-maxPending'),maxPerHour:v('auto-maxPerHour')}})})).json();
+  const r=await (await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({maxDownloadMB:v('dl-maxMB'),auto:{maxFileMB:v('auto-maxMB'),maxCopies:v('auto-maxCopies'),maxPending:v('auto-maxPending'),maxPerHour:v('auto-maxPerHour')}})})).json();
   if(!r.ok){document.getElementById('auto-msg').textContent='Error: '+(r.error||'save failed');return;}
   document.getElementById('auto-msg').textContent='Saved.';
   await loadSettings();
@@ -975,7 +983,7 @@ export function startDashboard(cfg: AppConfig, db: DatabaseSync): void {
   });
 
   app.get('/api/settings', (_req, res) => {
-    res.json({ adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg), auto: autoApproveLimits(db, cfg) });
+    res.json({ adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg), maxDownloadMB: maxDownloadMB(db, cfg), auto: autoApproveLimits(db, cfg) });
   });
 
   app.post('/api/settings', (req, res) => {
@@ -991,6 +999,8 @@ export function startDashboard(cfg: AppConfig, db: DatabaseSync): void {
       if (!Number.isFinite(n)) return null;
       return String(Math.min(Math.max(n, min), max));
     };
+    const dl = num(req.body?.maxDownloadMB, 1, 1000);
+    if (dl !== null) setSetting(db, 'maxDownloadMB', dl);
     const autoMap: Record<string, { key: string; min: number; max: number }> = {
       maxFileMB: { key: 'autoPrintMaxMB', min: 1, max: 1000 },
       maxCopies: { key: 'autoPrintMaxCopies', min: 1, max: 10 },
@@ -1017,7 +1027,7 @@ export function startDashboard(cfg: AppConfig, db: DatabaseSync): void {
         if (nv !== null) setSetting(db, key, nv);
       }
     }
-    res.json({ ok: true, adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg), auto: autoApproveLimits(db, cfg) });
+    res.json({ ok: true, adminApproval: isAdminApproval(db, cfg), mockPrint: isMockPrint(db, cfg), maxDownloadMB: maxDownloadMB(db, cfg), auto: autoApproveLimits(db, cfg) });
   });
 
   app.get('/api/jobs', (_req, res) => {

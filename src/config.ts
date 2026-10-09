@@ -50,7 +50,7 @@ export function loadConfig(): AppConfig {
     allowedNumbers: parseAllowed(process.env.ALLOWED_NUMBERS),
     defaultColorMode: mode === 'COLOR' ? 'COLOR' : 'BW',
     defaultCopies: copies,
-    maxFileMB: parseInt(process.env.MAX_FILE_MB ?? '20', 10) || 20,
+    maxFileMB: num(process.env.MAX_FILE_MB, 20, 1, 1000),
     inboxDir: path.resolve(process.env.INBOX_DIR ?? './inbox'),
     port: parseInt(process.env.PORT ?? '3001', 10) || 3001,
     linkPhoneNumber: (process.env.WHATSAPP_NUMBER ?? '').replace(/\D/g, ''),
