@@ -1,0 +1,7 @@
+node_modules/
+dist/
+auth/
+inbox/*
+!inbox/.gitkeep
+.env
+*.log

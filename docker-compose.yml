@@ -1,0 +1,14 @@
+services:
+  print-bridge:
+    build: .
+    container_name: whatsapp-print-bridge
+    env_file: .env
+    environment:
+      INBOX_DIR: /app/inbox
+    volumes:
+      - ./inbox:/app/inbox
+      - ./auth:/app/auth
+      # Share host CUPS socket so `lp` works from container (Linux/Pi).
+      # macOS: CUPS runs on host; use ipp://host.docker.internal:631 instead.
+      - /var/run/cups:/var/run/cups
+    restart: unless-stopped

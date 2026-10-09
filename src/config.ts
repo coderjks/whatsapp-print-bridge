@@ -1,0 +1,50 @@
+import 'dotenv/config';
+import path from 'node:path';
+
+export type ColorMode = 'BW' | 'COLOR';
+
+export interface AppConfig {
+  printerName: string;
+  allowedNumbers: Set<string>;
+  defaultColorMode: ColorMode;
+  defaultCopies: number;
+  maxFileMB: number;
+  inboxDir: string;
+  port: number;
+  /** Digits-only WhatsApp number to link via pairing code. Empty = QR-code flow. */
+  linkPhoneNumber: string;
+  /** When true, skip real `lp` printing: log + archive the PDF instead. */
+  mockPrint: boolean;
+  /** When true, jobs wait for dashboard approval; when false, WhatsApp PRINT prints directly. */
+  adminApproval: boolean;
+}
+
+export function parseAllowed(input: string | undefined): Set<string> {
+  if (!input) return new Set();
+  return new Set(
+    input
+      .split(',')
+      .map((s) => s.trim().replace(/\D/g, ''))
+      .filter(Boolean),
+  );
+}
+
+export function loadConfig(): AppConfig {
+  const mode = (process.env.DEFAULT_COLOR_MODE ?? 'BW').toUpperCase();
+  const copies = Math.min(
+    Math.max(parseInt(process.env.DEFAULT_COPIES ?? '1', 10) || 1, 1),
+    10,
+  );
+  return {
+    printerName: process.env.PRINTER_NAME ?? '',
+    allowedNumbers: parseAllowed(process.env.ALLOWED_NUMBERS),
+    defaultColorMode: mode === 'COLOR' ? 'COLOR' : 'BW',
+    defaultCopies: copies,
+    maxFileMB: parseInt(process.env.MAX_FILE_MB ?? '20', 10) || 20,
+    inboxDir: path.resolve(process.env.INBOX_DIR ?? './inbox'),
+    port: parseInt(process.env.PORT ?? '3000', 10) || 3000,
+    linkPhoneNumber: (process.env.WHATSAPP_NUMBER ?? '').replace(/\D/g, ''),
+    mockPrint: ['1', 'true', 'yes'].includes((process.env.MOCK_PRINT ?? '').toLowerCase()),
+    adminApproval: ['1', 'true', 'yes'].includes((process.env.ADMIN_APPROVAL ?? '').toLowerCase()),
+  };
+}
