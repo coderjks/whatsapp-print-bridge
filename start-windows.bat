@@ -14,25 +14,30 @@ if errorlevel 1 (
   exit /b 1
 )
 
-where soffice >nul 2>nul
-if not errorlevel 1 goto :office_ok
-if exist "C:\Program Files\LibreOffice\program\soffice.exe" goto :office_ok
-if exist "C:\Program Files (x86)\LibreOffice\program\soffice.exe" goto :office_ok
 REM LibreOffice is optional: only needed for DOCX/PPTX/XLSX. PDFs and images work without it.
-if /i "%SKIP_OFFICE_CHECK%"=="1" goto :office_ok
-if /i "%1"=="--skip-office-check" goto :office_ok
-if /i "%1"=="--no-office" goto :office_ok
+set "OFFICE_FOUND=0"
+where soffice >nul 2>nul
+if not errorlevel 1 set "OFFICE_FOUND=1"
+if exist "C:\Program Files\LibreOffice\program\soffice.exe" set "OFFICE_FOUND=1"
+if exist "C:\Program Files (x86)\LibreOffice\program\soffice.exe" set "OFFICE_FOUND=1"
+if "%OFFICE_FOUND%"=="1" goto office_ok
+if /i "%SKIP_OFFICE_CHECK%"=="1" goto office_ok
+if "%~1"=="" goto office_ask
+if /i "%~1"=="--skip-office-check" goto office_ok
+if /i "%~1"=="--no-office" goto office_ok
+:office_ask
 echo.
-echo [PrintBridge] LibreOffice not found (optional component).
+echo [PrintBridge] LibreOffice not found - optional component.
 echo   Without it: PDFs and images print fine; Word/Excel/PowerPoint files will be skipped.
 echo   With it:    DOCX/PPTX/XLSX also print via automatic conversion.
-set "INSTALL_OFFICE="
-set /p INSTALL_OFFICE="Install LibreOffice now? [y/N]: "
-if /i "%INSTALL_OFFICE%"=="y" goto :install_office
-if /i "%INSTALL_OFFICE%"=="yes" goto :install_office
-echo [PrintBridge] Skipping LibreOffice - continuing (set SKIP_OFFICE_CHECK=1 to hide this prompt).
-goto :office_ok
-:install_office
+set "INSTALL_OFFICE=n"
+set /p "INSTALL_OFFICE=Install LibreOffice now? [y/N]: "
+if /i "%INSTALL_OFFICE%"=="y" goto office_install
+if /i "%INSTALL_OFFICE%"=="yes" goto office_install
+echo [PrintBridge] Skipping LibreOffice - continuing.
+echo [PrintBridge] Tip: set SKIP_OFFICE_CHECK=1 to hide this prompt next time.
+goto office_ok
+:office_install
 where winget >nul 2>nul
 if errorlevel 1 (
   echo [PrintBridge] winget not found - please install manually from https://www.libreoffice.org/download/download-libreoffice/
