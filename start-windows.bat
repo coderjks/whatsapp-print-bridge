@@ -15,12 +15,37 @@ if errorlevel 1 (
 )
 
 where soffice >nul 2>nul
+if not errorlevel 1 goto :office_ok
+if exist "C:\Program Files\LibreOffice\program\soffice.exe" goto :office_ok
+if exist "C:\Program Files (x86)\LibreOffice\program\soffice.exe" goto :office_ok
+REM LibreOffice is optional: only needed for DOCX/PPTX/XLSX. PDFs and images work without it.
+if /i "%SKIP_OFFICE_CHECK%"=="1" goto :office_ok
+if /i "%1"=="--skip-office-check" goto :office_ok
+if /i "%1"=="--no-office" goto :office_ok
+echo.
+echo [PrintBridge] LibreOffice not found (optional component).
+echo   Without it: PDFs and images print fine; Word/Excel/PowerPoint files will be skipped.
+echo   With it:    DOCX/PPTX/XLSX also print via automatic conversion.
+set "INSTALL_OFFICE="
+set /p INSTALL_OFFICE="Install LibreOffice now? [y/N]: "
+if /i "%INSTALL_OFFICE%"=="y" goto :install_office
+if /i "%INSTALL_OFFICE%"=="yes" goto :install_office
+echo [PrintBridge] Skipping LibreOffice - continuing (set SKIP_OFFICE_CHECK=1 to hide this prompt).
+goto :office_ok
+:install_office
+where winget >nul 2>nul
 if errorlevel 1 (
-  if not exist "C:\Program Files\LibreOffice\program\soffice.exe" if not exist "C:\Program Files (x86)\LibreOffice\program\soffice.exe" (
-    echo [PrintBridge] WARNING: LibreOffice not found - Word/Excel/PowerPoint files won't print.
-    echo Install it from https://www.libreoffice.org/download/download-libreoffice/ (PDFs and images work fine without it^).
-  )
+  echo [PrintBridge] winget not found - please install manually from https://www.libreoffice.org/download/download-libreoffice/
+  echo [PrintBridge] Continuing without LibreOffice ...
+  goto :office_ok
 )
+echo [PrintBridge] Installing LibreOffice (one time, may take a few minutes) ...
+winget install -e --id TheDocumentFoundation.LibreOffice --accept-source-agreements --accept-package-agreements
+if errorlevel 1 (
+  echo [PrintBridge] LibreOffice install failed or was cancelled - continuing without it.
+  echo Get it later from https://www.libreoffice.org/download/download-libreoffice/
+)
+:office_ok
 
 if not exist .env (
   echo [PrintBridge] Creating default .env ...

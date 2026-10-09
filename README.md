@@ -28,9 +28,12 @@ Windows → double-click **`start-windows.bat`** · macOS → `./start-macos.sh`
 ### Windows (cybercafe laptop)
 
 1. Double-click **`start-windows.bat`**. No Node? It installs the latest LTS itself
-   (via `winget`, else a silent MSI — may show one admin prompt), warns if
-   LibreOffice is missing (needed for Word/PowerPoint/Excel files, from
+   (via `winget`, else a silent MSI — may show one admin prompt).
+   LibreOffice is **optional** (only for Word/PowerPoint/Excel — PDFs and images
+   work without it): if missing, the script asks `Install LibreOffice now? [y/N]`
+   (default No, via `winget`; manual download at
    https://www.libreoffice.org/download/download-libreoffice/).
+   Set `SKIP_OFFICE_CHECK=1` or pass `--skip-office-check` to skip the prompt.
    First run installs dependencies; every run opens the dashboard at
    `http://localhost:3001`.
 2. Link WhatsApp, pick the Windows printer from the side-panel dropdown,
